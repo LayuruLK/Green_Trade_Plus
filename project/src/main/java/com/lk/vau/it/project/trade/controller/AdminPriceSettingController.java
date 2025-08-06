@@ -140,7 +140,7 @@ public class AdminPriceSettingController {
     }
 
     /**
-     * Get current authenticated username
+     * Get current authenticated userName
      */
     private String getCurrentUsername() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

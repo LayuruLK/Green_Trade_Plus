@@ -87,6 +87,12 @@ public class User {
     @Column(name = "account_active", nullable = false)
     private boolean accountActive;
 
+    @Column(name = "biometric_public_key", length = 2048)
+    private String biometricPublicKey;
+
+    @Column(name = "biometric_enabled", nullable = false)
+    private boolean biometricEnabled = false;
+
     // Pre-persist hook to set default values
     @PrePersist
     protected void onCreate() {
@@ -275,5 +281,20 @@ public class User {
 
     public void setAccountActive(boolean accountActive) {
         this.accountActive = accountActive;
+    }
+
+    public String getBiometricPublicKey() {
+        return biometricPublicKey;
+    }
+    
+    public void setBiometricPublicKey(String biometricPublicKey) {
+        this.biometricPublicKey = biometricPublicKey;
+    }
+    public boolean isBiometricEnabled() {
+        return biometricEnabled;
+    }
+
+    public void setBiometricEnabled(boolean biometricEnabled) {
+        this.biometricEnabled = biometricEnabled;
     }
 }

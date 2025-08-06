@@ -12,7 +12,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../hooks/useAuth';
+import { useAuth } from '../hooks/useAuth'; // Ensure this path is correct
+// REMOVE THIS LINE: import ReactNativeBiometrics from 'react-native-biometrics';
+import * as LocalAuthentication from 'expo-local-authentication'; // Keep this for device-side biometric checks
 
 // Green color palette for farming app
 const COLORS = {
@@ -34,8 +36,9 @@ const COLORS = {
 
 
 const SettingsScreen = () => {
-    const { user, logout } = useAuth();
-    
+    // Destructure new functions from useAuth
+    const { user, logout, updateBiometricPreference, enableBiometricAuth, disableBiometricAuth, checkBiometricSupport } = useAuth();
+
     // Settings states
     const [notifications, setNotifications] = useState(true);
     const [marketAlerts, setMarketAlerts] = useState(true);
@@ -43,8 +46,60 @@ const SettingsScreen = () => {
     const [weatherAlerts, setWeatherAlerts] = useState(true);
     const [darkMode, setDarkMode] = useState(false);
     const [locationServices, setLocationServices] = useState(true);
-    const [biometric, setBiometric] = useState(false);
+    const [biometric, setBiometric] = useState(false); // You might want to fetch initial state from user object or local storage
     const [autoSync, setAutoSync] = useState(true);
+
+    // Initial check for biometric state (e.g., from user profile if stored on backend)
+    // useEffect(() => {
+    //     // Fetch initial biometric state for the user from backend if available
+    //     // For now, it defaults to false
+    // }, []);
+
+
+    // --- Modified handleBiometricToggle ---
+    const handleBiometricToggle = async (value) => {
+        try {
+            // 1. Check biometric support
+            const isSupported = await checkBiometricSupport();
+            if (!isSupported) {
+                Alert.alert('Biometrics Not Available', 'Your device does not support biometric authentication.');
+                setBiometric(false);
+                return;
+            }
+
+            // 2. Authenticate with device biometrics
+            const result = await LocalAuthentication.authenticateAsync({
+                promptMessage: 'Authenticate to change biometric login setting',
+                cancelLabel: 'Cancel',
+            });
+
+            if (result.success) {
+                // 3. Update backend preference
+                const backendSuccess = await updateBiometricPreference(value);
+
+                if (backendSuccess) {
+                    setBiometric(value);
+                    Alert.alert('Success', `Biometric login ${value ? 'enabled' : 'disabled'}`);
+                } else {
+                    throw new Error('Failed to update server');
+                }
+            } else {
+                throw new Error(result.error || 'Authentication failed');
+            }
+        } catch (error) {
+            console.error('Biometric toggle error:', error);
+            Alert.alert('Error', error.message || 'Failed to update biometric settings');
+            setBiometric(!value); // Revert switch state
+        }
+    };
+    // --- END Modified handleBiometricToggle ---
+
+
+    // The original setupBiometricAuth and removeBiometricAuth functions are now unnecessary here.
+    // Their logic is either integrated into `handleBiometricToggle` or moved to AuthContext.js
+    // if they involve backend API calls.
+    // The actual key generation/deletion (if using react-native-biometrics) would also move to AuthContext
+    // or be handled by a different mechanism if sticking with expo-local-authentication.
 
     const handleLogout = async () => {
         Alert.alert(
@@ -52,8 +107,8 @@ const SettingsScreen = () => {
             'Are you sure you want to logout?',
             [
                 { text: 'Cancel', style: 'cancel' },
-                { 
-                    text: 'Logout', 
+                {
+                    text: 'Logout',
                     style: 'destructive',
                     onPress: async () => await logout()
                 }
@@ -67,8 +122,8 @@ const SettingsScreen = () => {
             'This action cannot be undone. All your data will be permanently deleted.',
             [
                 { text: 'Cancel', style: 'cancel' },
-                { 
-                    text: 'Delete', 
+                {
+                    text: 'Delete',
                     style: 'destructive',
                     onPress: () => console.log('Account deletion requested')
                 }
@@ -81,8 +136,8 @@ const SettingsScreen = () => {
     };
 
     const SettingItem = ({ icon, title, subtitle, onPress, rightComponent, showBorder = true }) => (
-        <TouchableOpacity 
-            style={[styles.settingItem, !showBorder && styles.noBorder]} 
+        <TouchableOpacity
+            style={[styles.settingItem, !showBorder && styles.noBorder]}
             onPress={onPress}
             activeOpacity={0.7}
         >
@@ -273,7 +328,7 @@ const SettingsScreen = () => {
                             rightComponent={
                                 <Switch
                                     value={biometric}
-                                    onValueChange={setBiometric}
+                                    onValueChange={handleBiometricToggle}
                                     trackColor={{ false: COLORS.disabled, true: COLORS.accent }}
                                     thumbColor={biometric ? COLORS.primary : '#f4f3f4'}
                                 />
@@ -404,7 +459,7 @@ const SettingsScreen = () => {
                             <Ionicons name="log-out-outline" size={20} color="white" />
                             <Text style={styles.logoutButtonText}>Logout</Text>
                         </TouchableOpacity>
-                        
+
                         <TouchableOpacity style={styles.deleteButton} onPress={handleDeleteAccount}>
                             <Ionicons name="trash-outline" size={20} color="white" />
                             <Text style={styles.deleteButtonText}>Delete Account</Text>

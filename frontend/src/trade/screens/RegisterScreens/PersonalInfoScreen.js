@@ -90,7 +90,7 @@ const PersonalInfoScreen = ({
           
           <FormInput
             label="Username"
-            placeholder="Create a username"
+            placeholder="Create a userName"
             value={formData.userName}
             onChangeText={(text) => handleInputChange('userName', text)}
             error={errors.userName}

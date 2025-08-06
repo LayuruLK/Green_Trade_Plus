@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Image,
   Alert
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../hooks/useAuth';
 import { COLORS } from '../constants/colors';
 import Toast from 'react-native-toast-message';
@@ -17,7 +18,31 @@ const LoginScreen = ({ navigation }) => {
   const [usernameOrPhone, setUsernameOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const { login, biometricLogin, checkBiometricSupport } = useAuth();
+
+  //Fingerprint in
+  useEffect(() => {
+    const checkBiometrics = async () => {
+      const isAvailable = await checkBiometricSupport();
+      setBiometricAvailable(isAvailable);
+    };
+    checkBiometrics();
+  }, []);
+
+  const handleBiometricLogin = async () => {
+    setIsLoading(true);
+    const result = await biometricLogin();
+
+    if (result.success) {
+      showToast('success', 'Success', 'Logged in with biometrics!');
+    } else {
+      showToast('error', 'Biometric Login Failed', result.message);
+    }
+
+    setIsLoading(false);
+  };
+  //Fingerprint out
 
   const showToast = (type, title, message) => {
     Toast.show({
@@ -34,17 +59,17 @@ const LoginScreen = ({ navigation }) => {
       showToast('error', 'Validation Error', 'Please fill in all fields');
       return;
     }
-  
+
     setIsLoading(true);
-  
+
     const result = await login(usernameOrPhone, password);
-  
+
     if (result.success) {
       showToast('success', 'Success', 'Login successfully!');
     } else {
       showToast('error', 'Login Failed', result.message);
     }
-  
+
     setIsLoading(false);
   };
 
@@ -93,6 +118,16 @@ const LoginScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
       </View>
+      {biometricAvailable && (
+        <TouchableOpacity
+          style={styles.biometricButton}
+          onPress={handleBiometricLogin}
+          disabled={isLoading}
+        >
+          <Ionicons name="finger-print" size={24} color={COLORS.primary} />
+          <Text style={styles.biometricButtonText}>Login with Biometrics</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -156,6 +191,23 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: 'bold',
   },
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  biometricButtonText: {
+    color: COLORS.primary,
+    marginLeft: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+  }
 });
 
 export default LoginScreen;
